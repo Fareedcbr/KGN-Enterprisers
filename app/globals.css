@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles from the design */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.glass-panel {
+  background: rgba(18, 33, 49, 0.7);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ev-glow:hover {
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
+}
+.ev-glow-green:hover {
+  box-shadow: 0 0 20px rgba(47, 248, 1, 0.35);
+}
+body.sidebar-collapsed #sidebar {
+  transform: translateX(-100%) !important;
+}
+body.sidebar-collapsed #admin-header,
+body.sidebar-collapsed #admin-main {
+  margin-left: 0 !important;
+}
+body {
+  background-color: #051424;
+  color: #d4e4fa;
+  font-family: 'Hanken Grotesk', sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: #1c2b3c #051424;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #051424;
+}
+::-webkit-scrollbar-thumb {
+  background: #1c2b3c;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #273647;
+}
