@@ -88,6 +88,7 @@ export default function PublicWebsite() {
         .from('vehicles')
         .select('*')
         .order('created_at', { ascending: false });
+        
 
       if (fetchErr) throw fetchErr;
       setVehicles(data || []);
