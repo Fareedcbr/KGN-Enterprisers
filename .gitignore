@@ -1,6 +1,29 @@
+# Dependencies
 node_modules/
+
+# Next.js
 .next/
+out/
+
+# Build
 dist/
 build/
-.vercel/
+
+# Environment files
 .env
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# Logs
+*.log
+npm.log
+dev.log
+
+# Vercel
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
