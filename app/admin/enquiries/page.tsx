@@ -4,12 +4,75 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
+interface Enquiry {
+  id: string;
+  customer_name: string;
+  email: string | null;
+  phone: string | null;
+  vehicles: { name: string } | null;
+  vehicle_name: string | null;
+  message: string;
+  status: 'new' | 'contacted' | 'quoted' | 'sold' | 'lost';
+  created_at: string;
+}
+
 export default function Enquiries() {
-  const [enquiries, setEnquiries] = useState([]);
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
-  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+  const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
   const router = useRouter();
+
+  function exportEnquiriesToCSV() {
+    if (!enquiries.length) {
+      alert('No enquiries to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = ['ID', 'Customer Name', 'Email', 'Phone', 'Vehicle Name', 'Message', 'Status', 'Created At'];
+
+    // Map enquiries to CSV rows
+    const rows = enquiries.map(enquiry => {
+      const vehicleName = enquiry.vehicles?.name || enquiry.vehicle_name || 'N/A';
+      return [
+        enquiry.id,
+        enquiry.customer_name,
+        enquiry.email || '',
+        enquiry.phone || '',
+        vehicleName,
+        enquiry.message.replace(/"/g, '""'), // Escape double quotes
+        enquiry.status,
+        enquiry.created_at
+      ];
+    });
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => {
+        // Escape fields with commas and quotes
+        return row.map(field => {
+          const stringField = String(field);
+          if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+            return `"${stringField.replace(/"/g, '""')}"`;
+          }
+          return stringField;
+        }).join(',')
+      })
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `enquiries_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   useEffect(() => {
     fetchEnquiries();
@@ -40,7 +103,7 @@ export default function Enquiries() {
     setLoading(false);
   }
 
-  function formatINR(amount) {
+  function formatINR(amount: number) {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -48,7 +111,7 @@ export default function Enquiries() {
     }).format(amount);
   }
 
-  function viewEnquiry(enquiry) {
+  function viewEnquiry(enquiry: Enquiry) {
     setSelectedEnquiry(enquiry);
     setShowDetails(true);
   }
@@ -58,7 +121,7 @@ export default function Enquiries() {
     setSelectedEnquiry(null);
   }
 
-  function updateStatus(enquiryId, status) {
+  function updateStatus(enquiryId: string, status: Enquiry['status']) {
     supabase
       .from('enquiries')
       .update({ status })
@@ -84,10 +147,18 @@ export default function Enquiries() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <h2 className="font-display-lg text-[32px] font-bold text-on-surface">Customer Enquiries</h2>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <h2 className="font-display-lg text-[32px] font-bold text-on-surface">Customer Enquiries</h2>
+          <button
+            onClick={exportEnquiriesToCSV}
+            className="px-4 py-2 bg-secondary-container text-on-surface-secondary hover:bg-secondary-container/80 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined">download</span>
+            Export CSV
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           {/* No add button for enquiries as they come from customers */}
-
         </div>
       </div>
 
@@ -130,7 +201,7 @@ export default function Enquiries() {
             <tbody className="divide-y divide-outline-variant/30 font-body-md text-sm">
               {enquiries.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-on-surface-variant/40">
+                  <td colSpan={6} className="p-8 text-center text-on-surface-variant/40">
                     No enquiries found.
                   </td>
                 </tr>
@@ -242,19 +313,20 @@ export default function Enquiries() {
                             value={status}
                             checked={selectedEnquiry.status === status}
                             onChange={(e) => {
-                              updateStatus(selectedEnquiry.id, e.target.value);
+                              updateStatus(selectedEnquiry.id, e.target.value as Enquiry['status']);
                             }}
                             className="h-4 w-4 text-primary-container focus:ring-primary-container border-offset-2"
                           />
                           <span className="text-xs text-on-surface-variant font-label-sm capitalize">{status}</span>
                         </label>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
       )}
     </div>
   );

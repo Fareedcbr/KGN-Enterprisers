@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { uploadFiles } from '@/lib/storage';
+import { Vehicle } from '@/types/vehicle';
 
 interface VehicleFormProps {
-  vehicle?: any; // The vehicle object for editing, undefined for creating
+  vehicle?: Vehicle; // The vehicle object for editing, undefined for creating
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -28,6 +29,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
     featured: false,
     availability: 'available',
     stock: 0,
+    hidden: false,
     images: [] as string[],
   });
 
@@ -57,6 +59,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         featured: vehicle.featured || false,
         availability: vehicle.availability || 'available',
         stock: vehicle.stock || 0,
+        hidden: vehicle.hidden ?? false,
         images: vehicle.images || [],
       });
       // Set preview URLs to existing images
@@ -80,6 +83,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         featured: false,
         availability: 'available',
         stock: 0,
+        hidden: false,
         images: [],
       });
       setSelectedFiles([]);
@@ -88,18 +92,28 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
   }, [vehicle]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type, checked, files } = e.target;
-    if (name === 'images' && files) {
-      setSelectedFiles(Array.from(files));
-      // Generate preview URLs for selected files
-      const previewURLs = Array.from(files).map(file => URL.createObjectURL(file));
-      setPreviewUrls(previewURLs);
-    } else if (type === 'checkbox') {
-      setFormData(prev => ({ ...prev, [name]: checked }));
-    } else if (type === 'number') {
-      setFormData(prev => ({ ...prev, [name]: value ? parseFloat(value) : 0 }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+    const target = e.target;
+
+    // Handle file input separately
+    if (target instanceof HTMLInputElement && target.type === 'file' && target.name === 'images') {
+      if (target.files) {
+        const files = Array.from(target.files);
+        setSelectedFiles(files);
+        const previewURLs = files.map((file: File) => URL.createObjectURL(file));
+        setPreviewUrls(previewURLs);
+      }
+      return;
+    }
+
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+      const checked = target.checked;
+      setFormData(prev => ({ ...prev, [target.name]: checked }));
+    } else if (target instanceof HTMLInputElement && (target.type === 'number' || target.type === 'range')) {
+      setFormData(prev => ({ ...prev, [target.name]: target.value ? parseFloat(target.value) : 0 }));
+    } else if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      setFormData(prev => ({ ...prev, [target.name]: target.value }));
+    } else if (target instanceof HTMLSelectElement) {
+      setFormData(prev => ({ ...prev, [target.name]: target.value }));
     }
   };
 
@@ -135,6 +149,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         featured: formData.featured,
         availability: formData.availability,
         stock: formData.stock,
+        hidden: formData.hidden,
         images: imageUrls,
         updated_at: new Date().toISOString(),
       };
@@ -172,8 +187,17 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
 
   const handleCancel = () => {
     onCancel();
-    // Revoke object URLs to prevent memory leaks
-    previewUrls.forEach(URL.revokeObjectURL);
+    // Revoke object URLs to prevent memory leaks (only those created with URL.createObjectURL)
+    previewUrls.forEach(url => {
+      try {
+        // Only revoke object URLs (those starting with blob:)
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      } catch (e) {
+        // Ignore errors if URL was already revoked
+      }
+    });
     setSelectedFiles([]);
     setPreviewUrls([]);
   };
@@ -334,8 +358,8 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         </div>
       </div>
 
-      {/* Featured and Stock */}
-      <div className="flex items-center gap-6">
+      {/* Featured, Hidden, and Stock */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -345,6 +369,16 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
             className="h-4 w-4 text-primary-container focus:ring-primary-container border-offset-2"
           />
           <label className="text-xs text-on-surface-variant font-label-sm">Featured Vehicle</label>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="hidden"
+            checked={formData.hidden}
+            onChange={handleChange}
+            className="h-4 w-4 text-primary-container focus:ring-primary-container border-offset-2"
+          />
+          <label className="text-xs text-on-surface-variant font-label-sm">Hide from Public</label>
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-on-surface-variant font-label-sm">Stock</label>
@@ -359,32 +393,124 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         </div>
       </div>
 
-      {/* Image Upload */}
+      {/* Image Management */}
       <div className="space-y-4">
         <div>
           <label className="block font-label-sm text-xs text-outline uppercase tracking-wider mb-2">Vehicle Images</label>
-          <div className="flex flex-col gap-2">
-            <input
-              type="file"
-              name="images"
-              multiple
-              accept="image/*"
-              onChange={handleChange}
-              className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary-container outline-none"
-            />
-            {selectedFiles.length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                {selectedFiles.map((file, index) => (
-                  <div key={index} className="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden">
-                    <img src={previewUrls[index]} alt={file.name} className="w-full h-full object-cover" />
-                  </div>
-                ))}
+          <div className="space-y-4">
+            {/* Existing Images Preview */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-on-surface-variant">Current Images ({formData.images.length})</span>
+                <button
+                  onClick={() => {
+                    const confirmRemove = window.confirm('Are you sure you want to remove all images?');
+                    if (confirmRemove) {
+                      setFormData(prev => ({ ...prev, images: [] }));
+                    }
+                  }}
+                  className="text-xs text-error hover:text-error/70"
+                >
+                  Remove All
+                </button>
               </div>
-            )}
+
+              {formData.images.length > 0 ? (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {formData.images.map((imageUrl, index) => (
+                    <div key={imageUrl} className="relative group">
+                      <img
+                        src={imageUrl}
+                        alt={`Vehicle image ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border border-outline-variant/40 hover:border-primary-container transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData(prev => {
+                            const newImages = [...prev.images];
+                            newImages.splice(index, 1);
+                            return { ...prev, images: newImages };
+                          });
+                        }}
+                        className="absolute top-2 right-2 -z-10 flex h-6 w-6 items-center justify-center rounded-full bg-error/90 text-xs font-medium text-error hover:bg-error/100"
+                      >
+                        <span className="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-on-surface-variant/50 text-center py-4">No images uploaded yet</p>
+              )}
+            </div>
+
+            {/* New Images Upload */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-on-surface-variant">Add New Images</span>
+                <button
+                  onClick={() => {
+                    // Trigger file input click
+                    const fileInput = document.getElementById('vehicle-image-upload');
+                    if (fileInput) {
+                      fileInput.click();
+                    }
+                  }}
+                  className="text-xs text-primary-container hover:text-primary-container/70"
+                >
+                  Add More
+                </button>
+              </div>
+              <input
+                id="vehicle-image-upload"
+                type="file"
+                name="images"
+                multiple
+                accept="image/*"
+                onChange={handleChange}
+                className="hidden"
+              />
+              {selectedFiles.length > 0 && (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {selectedFiles.map((file, index) => (
+                    <div key={file.name + index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`New image ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border border-outline-variant/40 hover:border-primary-container transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Revoke the object URL for this file
+                          URL.revokeObjectURL(previewUrls[index]);
+                          setSelectedFiles(prev => {
+                            const newFiles = [...prev];
+                            newFiles.splice(index, 1);
+                            return newFiles;
+                          });
+                          setPreviewUrls(prev => {
+                            const newUrls = [...prev];
+                            newUrls.splice(index, 1);
+                            return newUrls;
+                          });
+                        }}
+                        className="absolute top-2 right-2 -z-10 flex h-6 w-6 items-center justify-center rounded-full bg-error/90 text-xs font-medium text-error hover:bg-error/100"
+                      >
+                        <span className="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="text-xs text-on-surface-variant">
-          Currently selected: {selectedFiles.length} image(s). Existing images: {formData.images.length}
+          {formData.images.length} existing + {selectedFiles.length} new = {formData.images.length + selectedFiles.length} total images
         </div>
       </div>
 

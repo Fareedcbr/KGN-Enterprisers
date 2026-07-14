@@ -2,28 +2,23 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
       if (authError) throw authError;
 
       // Check if user is an admin
@@ -38,15 +33,10 @@ export default function AdminLogin() {
         throw new Error('User is not authorized as an admin');
       }
 
-      setSuccess('Login successful! Redirecting...');
-
-      // Redirect to dashboard or intended page
+      // Redirect to the intended page or /admin
       const redirectTo = new URLSearchParams(window.location.search).get('redirectTo') || '/admin';
-      setTimeout(() => {
-        router.push(redirectTo);
-      }, 1500);
+      window.location.href = redirectTo;
     } catch (err: any) {
-      console.error('Login error:', err);
       setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
@@ -73,7 +63,7 @@ export default function AdminLogin() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               required
               className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary-container outline-none"
             />
@@ -86,9 +76,9 @@ export default function AdminLogin() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               required
-              minLength="6"
+              minLength={6}
               className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary-container outline-none"
             />
           </div>
@@ -108,13 +98,6 @@ export default function AdminLogin() {
           <div className="p-4 mb-4 bg-error-container/20 text-error rounded-lg">
             <span className="material-symbols-outlined mr-2">error</span>
             {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="p-4 mb-4 bg-secondary-container/20 text-secondary-fixed rounded-lg">
-            <span className="material-symbols-outlined mr-2">check_circle</span>
-            {success}
           </div>
         )}
       </div>

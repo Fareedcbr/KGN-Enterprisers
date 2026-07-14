@@ -52,7 +52,7 @@ export default function Inventory() {
 
   async function fetchVehicles() {
     setLoading(true);
-    let query = supabase.from<Vehicle>('vehicles').select('*');
+    let query = supabase.from('vehicles').select('*');
 
     // Apply stock filter
     if (filter === 'in stock') {
@@ -140,7 +140,7 @@ export default function Inventory() {
           <h2 className="font-display-lg text-[32px] font-bold text-on-surface">Vehicle Inventory</h2>
           <p className="text-on-surface-variant font-body-md">Manage and track your fleet of premium electric vehicles.</p>
         </div>
-        <button onClick={() => router.push('/admin/vehicle/new')} className="bg-primary-container text-on-primary-container py-3 px-5 rounded-lg font-bold flex items-center justify-center gap-2 ev-glow transition-all duration-150 self-start sm:self-auto active:scale-95">
+        <button onClick={() => router.push('/admin/vehicles/new')} className="bg-primary-container text-on-primary-container py-3 px-5 rounded-lg font-bold flex items-center justify-center gap-2 ev-glow transition-all duration-150 self-start sm:self-auto active:scale-95">
           <span className="material-symbols-outlined">add</span>
           <span>Add New Vehicle</span>
         </button>
@@ -221,19 +221,21 @@ export default function Inventory() {
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-primary-container text-lg font-bold">{formatINR(bike.price)}</span>
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-secondary-fixed text-sm">{bike.battery_icon || 'battery_full'}</span>
+                      <span className="material-symbols-outlined text-secondary-fixed text-sm">battery</span>
                       <span className="text-xs text-on-surface-variant">{bike.range}</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="px-6 pb-6 border-t border-outline-variant/20 pt-4 flex gap-2">
-                <button onClick={() => recordSaleForVehicle(bike.id)} className="flex-1 bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-xs text-on-surface py-2 rounded font-bold ev-glow transition-all">Record Sale</button>
                 <button onClick={() => openEditVehicleModal(bike)} className="px-3 bg-surface-container-high hover:bg-primary-container/20 hover:text-primary-container text-xs text-on-surface-variant hover:text-on-surface py-2 rounded transition-all">
                   <span className="material-symbols-outlined text-sm block">edit</span>
                 </button>
                 <button onClick={() => deleteVehicle(bike.id)} className="px-3 bg-surface-container-high hover:bg-error-container/25 hover:text-error text-xs text-on-surface-variant hover:text-on-surface py-2 rounded transition-all">
                   <span className="material-symbols-outlined text-sm block">delete</span>
+                </button>
+                <button onClick={() => recordSaleForVehicle(bike.id)} className="px-3 bg-surface-container-high hover:bg-secondary-container/20 hover:text-secondary-fixed text-xs text-on-surface-variant hover:text-on-surface py-2 rounded transition-all">
+                  <span className="material-symbols-outlined text-sm block">sale</span>
                 </button>
               </div>
             </div>

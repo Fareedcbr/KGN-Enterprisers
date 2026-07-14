@@ -24,6 +24,7 @@ interface Vehicle {
   availability: string;
   stock: number;
   images: string[];
+  hidden: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -104,25 +105,25 @@ export default function Dashboard() {
     ] = await Promise.all([
       supabase
         .from('vehicles')
-        .select<Vehicle>('*', { count: 'exact' }),
+        .select('*', { count: 'exact', head: true }),
       supabase
         .from('vehicles')
-        .select<Vehicle>('*', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .gt('stock', 0),
       supabase
         .from('enquiries')
-        .select<Enquiry>('*', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .eq('status', 'sold'), // Assuming sold enquiries represent sold vehicles
       supabase
         .from('vehicles')
-        .select<Vehicle>('*', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .eq('featured', true),
       supabase
         .from('enquiries')
-        .select<Enquiry>('*', { count: 'exact' }),
+        .select('*', { count: 'exact', head: true }),
       supabase
         .from('enquiries')
-        .select<Enquiry>('*', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .in('status', ['new', 'contacted', 'quoted']),
     ]);
 
@@ -137,18 +138,21 @@ export default function Dashboard() {
   }
 
   async function fetchRecentActivities() {
-    const [recentEnquiries, recentVehicles] = await Promise.all([
+    const [recentEnquiriesResult, recentVehiclesResult] = await Promise.all([
       supabase
         .from('enquiries')
-        .select<Enquiry>('*, vehicles(name)')
+        .select('*, vehicles(name)')
         .order('created_at', { ascending: false })
         .limit(5),
       supabase
         .from('vehicles')
-        .select<Vehicle>('*')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(5),
     ]);
+
+    const recentEnquiries = recentEnquiriesResult.data as Enquiry[] || [];
+    const recentVehicles = recentVehiclesResult.data as Vehicle[] || [];
 
     let activities: Array<{
       type: 'enquiry' | 'vehicle';
@@ -160,8 +164,8 @@ export default function Dashboard() {
       iconColor: string;
     }> = [];
 
-    if (recentEnquiries.data) {
-      recentEnquiries.data.forEach((enquiry: Enquiry) => {
+    if (recentEnquiries.length > 0) {
+      recentEnquiries.forEach((enquiry) => {
         activities.push({
           type: 'enquiry',
           title: `New Enquiry: ${enquiry.vehicle_name || enquiry.vehicles?.name || 'Unknown Vehicle'}`,
@@ -174,8 +178,8 @@ export default function Dashboard() {
       });
     }
 
-    if (recentVehicles.data) {
-      recentVehicles.data.forEach((vehicle: Vehicle) => {
+    if (recentVehicles.length > 0) {
+      recentVehicles.forEach((vehicle) => {
         activities.push({
           type: 'vehicle',
           title: `New Vehicle: ${vehicle.name}`,
@@ -196,25 +200,18 @@ export default function Dashboard() {
   async function fetchFeaturedVehicles() {
     const { data, error } = await supabase
       .from('vehicles')
-      .select<Vehicle>('*')
+      .select('*')
       .eq('featured', true)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching featured vehicles:', error);
     } else {
-      setFeaturedVehicles(data || []);
+      setFeaturedVehicles(data as Vehicle[] || []);
     }
   }
 
-  function formatINR(amount: number) {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  }
-
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -224,21 +221,7 @@ export default function Dashboard() {
 
       {/* Bento Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        {/* Total Vehicles */}
-        <div className="bg-surface-container rounded-xl p-6 border border-outline-variant group hover:border-primary-container transition-all">
-          <div className="flex justify-between items-start mb-4">
-            <span className="p-2 bg-primary-container/10 rounded-lg text-primary-container">
-              <span className="material-symbols-outlined">dashboard</span>
-            </span>
-            <span className="text-secondary-fixed text-xs font-bold">+0%</span>
-          </div>
-          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Total Vehicles</p>
-          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-total-vehicles">
-            {stats.totalVehicles}
-          </h3>
-        </div>
-
-        {/* Available Vehicles */}
+        {/* Inventory */}
         <div className="bg-surface-container rounded-xl p-6 border border-outline-variant group hover:border-primary-container transition-all">
           <div className="flex justify-between items-start mb-4">
             <span className="p-2 bg-secondary-container/10 rounded-lg text-secondary-fixed">
@@ -249,64 +232,51 @@ export default function Dashboard() {
               <span className="text-on-surface-variant text-xs">Live</span>
             </div>
           </div>
-          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Available Vehicles</p>
-          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-available-vehicles">
+          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Inventory</p>
+          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-inventory">
             {stats.availableVehicles}
           </h3>
         </div>
 
-        {/* Sold Vehicles */}
+        {/* Sales Records */}
         <div className="bg-surface-container rounded-xl p-6 border border-outline-variant group hover:border-primary-container transition-all">
           <div className="flex justify-between items-start mb-4">
             <span className="p-2 bg-primary-container/10 rounded-lg text-primary-container">
-              <span className="material-symbols-outlined">check_circle</span>
+              <span className="material-symbols-outlined">receipt_long</span>
             </span>
             <span className="text-secondary-fixed text-xs font-bold">+0%</span>
           </div>
-          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Sold Vehicles</p>
-          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-sold-vehicles">
+          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Sales Records</p>
+          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-sales-records">
             {stats.soldVehicles}
           </h3>
         </div>
 
-        {/* Featured Vehicles */}
-        <div className="bg-surface-container rounded-xl p-6 border border-outline-variant group hover:border-primary-container transition-all">
-          <div className="flex justify-between items-start mb-4">
-            <span className="p-2 bg-secondary-container/10 rounded-lg text-secondary-fixed">
-              <span className="material-symbols-outlined">star</span>
-            </span>
-          </div>
-          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Featured Vehicles</p>
-          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-featured-vehicles">
-            {stats.featuredVehicles}
-          </h3>
-        </div>
-
-        {/* Total Enquiries */}
+        {/* Customers/Visitors */}
         <div className="bg-surface-container rounded-xl p-6 border border-outline-variant group hover:border-primary-container transition-all">
           <div className="flex justify-between items-start mb-4">
             <span className="p-2 bg-primary-container/10 rounded-lg text-primary-container">
-              <span className="material-symbols-outlined">forum</span>
+              <span className="material-symbols-outlined">group</span>
             </span>
             <span className="text-secondary-fixed text-xs font-bold">+0%</span>
           </div>
-          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Total Enquiries</p>
-          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-total-enquiries">
+          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Customers/Visitors</p>
+          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-customers-visitors">
             {stats.totalEnquiries}
           </h3>
         </div>
 
-        {/* Pending Enquiries */}
+        {/* Dashboard Overview */}
         <div className="bg-surface-container rounded-xl p-6 border border-outline-variant group hover:border-primary-container transition-all">
           <div className="flex justify-between items-start mb-4">
-            <span className="p-2 bg-error-container/10 rounded-lg text-error">
-              <span className="material-symbols-outlined">pending_actions</span>
+            <span className="p-2 bg-primary-container/10 rounded-lg text-primary-container">
+              <span className="material-symbols-outlined">dashboard</span>
             </span>
-            <span className="text-error text-xs font-bold" id="pending-growth">Active</span>
+            <span className="text-secondary-fixed text-xs font-bold">+0%</span>
           </div>
-          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Pending Enquiries</p>
-          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-pending-enquiries">
-            {String(stats.pendingEnquiries).padStart(2, '0')}
+          <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Dashboard</p>
+          <h3 className="font-display-lg text-[28px] font-bold text-on-surface" id="metric-dashboard">
+            {stats.totalVehicles}
           </h3>
         </div>
       </div>
@@ -372,14 +342,15 @@ export default function Dashboard() {
         </div>
         <div id="flagship-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
           {featuredVehicles.length === 0 ? (
-            <div className="col-span-full py-8 text-center text-on-surface-variant/40 border border-dashed border-outline-variant rounded-xl">
+            <div key="flagship-none" className="col-span-full py-8 text-center text-on-surface-variant/40 border border-dashed border-outline-variant rounded-xl">
               No featured vehicles yet.
             </div>
           ) : (
             featuredVehicles.map((vehicle) => (
               <div key={vehicle.id} className="bg-surface-container rounded-xl overflow-hidden border border-outline-variant group hover:border-primary-container transition-all flex flex-col h-full">
                 <div className="h-48 relative overflow-hidden bg-surface-container-low">
-                  <img className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                  <img
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                     src={(vehicle.images && vehicle.images.length > 0 && vehicle.images[0]) ? vehicle.images[0] : ''}
                     alt={vehicle.name}
                   />
@@ -416,7 +387,7 @@ export default function Dashboard() {
         wBtn.className = "px-3 py-1 text-xs font-bold text-on-surface-variant";
       } else {
         wBtn.className = "px-3 py-1 bg-surface-container-high rounded text-xs font-bold text-primary-container";
-        mBtn.className = "px-3 py-1 text-xs font-bold text_on-surface-variant";
+        mBtn.className = "px-3 py-1 text-xs font-bold text-on-surface-variant";
       }
       renderChart();
       setTimeout(animateChart, 50);
@@ -436,7 +407,7 @@ export default function Dashboard() {
                data-target-height="${item.height}">
             <div class="absolute inset-x-0 top-0 h-1 bg-primary-container blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity"></div>
           </div>
-          <div class="absolute bottom-[calc(${item.height}+8px)] scale-0 group-hover:scale-100 bg-surface-container-highest border border-outline-variant text-[10px] text-primary-container px-2 py-0.5 rounded font-label-sm transition-all duration-150 z-20 whitespace-nowrap">
+          <div className="absolute bottom-[calc(${item.height}+8px)] scale-0 group-hover:scale-100 bg-surface-container-highest border border-outline-variant text-[10px] text-primary-container px-2 py-0.5 rounded font-label-sm transition-all duration-150 z-20 whitespace-nowrap">
             ${item.height} Growth
           </div>
         </div>

@@ -1,25 +1,36 @@
 import './globals.css';
+import { AuthProvider } from '@/context/AuthProvider';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const metadata = {
   title: 'KGN Enterprises - EV Showroom',
   description: 'Premium Electric Vehicle Showroom Management System',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabaseClient = (await createSupabaseServerClient()) as SupabaseClient;
+
+  const {
+    data: { session },
+  } = await supabaseClient.auth.getSession();
+
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        />
       </head>
       <body>
-        {children}
+        <AuthProvider session={session}>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

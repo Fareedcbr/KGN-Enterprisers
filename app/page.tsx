@@ -338,11 +338,11 @@ export default function PublicWebsite() {
 
           {/* Navigation Action Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <a 
-              href="/admin" 
+            <a
+              href="/admin"
               className="bg-surface-container hover:bg-surface-container-high text-xs text-on-surface py-2.5 px-4 rounded-lg font-bold border border-outline-variant transition-all flex items-center gap-2"
             >
-              <span className="material-symbols-outlined text-sm">admin_panel_settings</span>
+              <span className="material-symbols-outlined text-sm">settings</span>
               <span>Admin Portal</span>
             </a>
             <button 
@@ -374,11 +374,11 @@ export default function PublicWebsite() {
             <button onClick={() => scrollToSection('about')} className="text-left font-medium py-2 border-b border-outline-variant/10 text-on-surface hover:text-primary-container">About Us</button>
             <button onClick={() => scrollToSection('contact')} className="text-left font-medium py-2 border-b border-outline-variant/10 text-on-surface hover:text-primary-container">Contact</button>
             <div className="flex flex-col gap-3 pt-2">
-              <a 
-                href="/admin" 
+              <a
+                href="/admin"
                 className="w-full bg-surface-container-high py-2.5 px-4 text-center rounded-lg text-sm font-bold border border-outline-variant text-on-surface flex items-center justify-center gap-2"
               >
-                <span className="material-symbols-outlined text-sm">admin_panel_settings</span>
+                <span className="material-symbols-outlined text-sm">settings</span>
                 <span>Admin Dashboard</span>
               </a>
               <button 
