@@ -65,18 +65,27 @@ export default function Dashboard() {
   }>>([]);
 
   const [featuredVehicles, setFeaturedVehicles] = useState<Vehicle[]>([]);
+  const [chartMode, setChartMode] = useState<'monthly' | 'weekly'>('monthly');
+  const [chartData, setChartData] = useState<Array<{ label: string; value: number }>>([]);
+  const [chartLoading, setChartLoading] = useState<boolean>(true);
+  const toggleChartMode = (mode: 'monthly' | 'weekly') => {
+    setChartMode(mode);
+    fetchChartData();
+  };
   const router = useRouter();
 
   useEffect(() => {
     fetchStats();
     fetchRecentActivities();
     fetchFeaturedVehicles();
+    fetchChartData();
     const vehiclesSubscription = supabase
       .channel('vehicles-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicles' }, () => {
         fetchStats();
         fetchRecentActivities();
         fetchFeaturedVehicles();
+        fetchChartData();
       })
       .subscribe();
     const enquiriesSubscription = supabase
@@ -85,6 +94,7 @@ export default function Dashboard() {
         fetchStats();
         fetchRecentActivities();
         fetchFeaturedVehicles();
+        fetchChartData();
       })
       .subscribe();
 
@@ -96,13 +106,13 @@ export default function Dashboard() {
 
   async function fetchStats() {
     const [
-      vehiclesCount,
-      availableVehiclesCount,
-      soldVehiclesCount,
-      featuredVehiclesCount,
-      enquiriesCount,
-      pendingEnquiriesCount,
-    ] = await Promise.all([
+      vehiclesCountResult,
+      availableVehiclesCountResult,
+      soldVehiclesCountResult,
+      featuredVehiclesCountResult,
+      enquiriesCountResult,
+      pendingEnquiriesCountResult,
+    ] = await Promise.allSettled([
       supabase
         .from('vehicles')
         .select('*', { count: 'exact', head: true }),
@@ -127,18 +137,66 @@ export default function Dashboard() {
         .in('status', ['new', 'contacted', 'quoted']),
     ]);
 
+    console.log("Vehicles Query Result:", vehiclesCountResult);
+
+    const vehiclesCount =
+      vehiclesCountResult.status === "fulfilled"
+        ? vehiclesCountResult.value.count
+        : 0;
+    if (vehiclesCountResult.status === 'rejected') {
+      console.error('Error fetching total vehicles count:', vehiclesCountResult.reason);
+    }
+
+    console.log("Available Vehicles Result:", availableVehiclesCountResult);
+
+    const availableVehiclesCount =
+      availableVehiclesCountResult.status === "fulfilled"
+        ? availableVehiclesCountResult.value.count
+        : 0;
+    if (availableVehiclesCountResult.status === 'rejected') {
+      console.error('Error fetching available vehicles count:', availableVehiclesCountResult.reason);
+    }
+
+    const soldVehiclesCount = soldVehiclesCountResult.status === 'fulfilled' ? soldVehiclesCountResult.value.count : 0;
+    if (soldVehiclesCountResult.status === 'rejected') {
+      console.error('Error fetching sold vehicles count:', soldVehiclesCountResult.reason);
+    }
+
+    const featuredVehiclesCount = featuredVehiclesCountResult.status === 'fulfilled' ? featuredVehiclesCountResult.value.count : 0;
+    if (featuredVehiclesCountResult.status === 'rejected') {
+      console.error('Error fetching featured vehicles count:', featuredVehiclesCountResult.reason);
+    }
+
+    const enquiriesCount = enquiriesCountResult.status === 'fulfilled' ? enquiriesCountResult.value.count : 0;
+    if (enquiriesCountResult.status === 'rejected') {
+      console.error('Error fetching total enquiries count:', enquiriesCountResult.reason);
+    }
+
+    const pendingEnquiriesCount = pendingEnquiriesCountResult.status === 'fulfilled' ? pendingEnquiriesCountResult.value.count : 0;
+    if (pendingEnquiriesCountResult.status === 'rejected') {
+      console.error('Error fetching pending enquiries count:', pendingEnquiriesCountResult.reason);
+    }
+
     setStats({
-      totalVehicles: vehiclesCount.count || 0,
-      availableVehicles: availableVehiclesCount.count || 0,
-      soldVehicles: soldVehiclesCount.count || 0,
-      featuredVehicles: featuredVehiclesCount.count || 0,
-      totalEnquiries: enquiriesCount.count || 0,
-      pendingEnquiries: pendingEnquiriesCount.count || 0,
+      totalVehicles: vehiclesCount,
+      availableVehicles: availableVehiclesCount,
+      soldVehicles: soldVehiclesCount,
+      featuredVehicles: featuredVehiclesCount,
+      totalEnquiries: enquiriesCount,
+      pendingEnquiries: pendingEnquiriesCount,
+    });
+    console.log("Stats being set:", {
+      totalVehicles: vehiclesCount,
+      availableVehicles: availableVehiclesCount,
+      soldVehicles: soldVehiclesCount,
+      featuredVehicles: featuredVehiclesCount,
+      totalEnquiries: enquiriesCount,
+      pendingEnquiries: pendingEnquiriesCount,
     });
   }
 
   async function fetchRecentActivities() {
-    const [recentEnquiriesResult, recentVehiclesResult] = await Promise.all([
+    const [recentEnquiriesResult, recentVehiclesResult] = await Promise.allSettled([
       supabase
         .from('enquiries')
         .select('*, vehicles(name)')
@@ -151,8 +209,15 @@ export default function Dashboard() {
         .limit(5),
     ]);
 
-    const recentEnquiries = recentEnquiriesResult.data as Enquiry[] || [];
-    const recentVehicles = recentVehiclesResult.data as Vehicle[] || [];
+    const recentEnquiries = recentEnquiriesResult.status === 'fulfilled' ? (recentEnquiriesResult.value.data || []) : [];
+    if (recentEnquiriesResult.status === 'rejected') {
+      console.error('Error fetching recent enquiries:', recentEnquiriesResult.reason);
+    }
+
+    const recentVehicles = recentVehiclesResult.status === 'fulfilled' ? (recentVehiclesResult.value.data || []) : [];
+    if (recentVehiclesResult.status === 'rejected') {
+      console.error('Error fetching recent vehicles:', recentVehiclesResult.reason);
+    }
 
     let activities: Array<{
       type: 'enquiry' | 'vehicle';
@@ -164,7 +229,7 @@ export default function Dashboard() {
       iconColor: string;
     }> = [];
 
-    if (recentEnquiries.length > 0) {
+    if (Array.isArray(recentEnquiries)) {
       recentEnquiries.forEach((enquiry) => {
         activities.push({
           type: 'enquiry',
@@ -178,7 +243,7 @@ export default function Dashboard() {
       });
     }
 
-    if (recentVehicles.length > 0) {
+    if (Array.isArray(recentVehicles)) {
       recentVehicles.forEach((vehicle) => {
         activities.push({
           type: 'vehicle',
@@ -211,7 +276,90 @@ export default function Dashboard() {
     }
   }
 
-  
+  async function fetchChartData() {
+    setChartLoading(true);
+    try {
+      if (chartMode === 'monthly') {
+        // Get last 6 months of vehicle data
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const { data, error } = await supabase
+          .from('vehicles')
+          .select('created_at')
+          .gte('created_at', sixMonthsAgo.toISOString())
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        // Group by month
+        const monthlyData: Record<string, number> = {};
+
+        data.forEach((vehicle) => {
+          const date = new Date(vehicle.created_at);
+          const monthKey = date.toISOString().substring(0, 7); // YYYY-MM
+          monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
+        });
+
+        // Generate labels for last 6 months (Feb, Mar, etc.) in chronological order
+        const chartDataArray: Array<{ label: string; value: number }> = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+          const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const yearMonth = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+          const label = date.toLocaleString('default', { month: 'short' }); // Just month abbreviation like "Feb"
+          chartDataArray.push({
+            label,
+            value: monthlyData[yearMonth] || 0,
+          });
+        }
+
+        setChartData(chartDataArray);
+      } else {
+        // Weekly: last 7 days (keeping existing enquiry-based implementation for now)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const { data, error } = await supabase
+          .from('enquiries')
+          .select('created_at')
+          .gte('created_at', sevenDaysAgo.toISOString())
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        // Group by day
+        const dailyData: Record<string, number> = {};
+
+        data.forEach((enquiry) => {
+          const date = new Date(enquiry.created_at);
+          const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          dailyData[dayKey] = (dailyData[dayKey] || 0) + 1;
+        });
+
+        // Create array for last 7 days (including zero days)
+        const chartDataArray: Array<{ label: string; value: number }> = [];
+        for (let i = 0; i < 7; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - (6 - i)); // Start from 6 days ago to today
+          const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          const label = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          chartDataArray.push({
+            label,
+            value: dailyData[dayKey] || 0,
+          });
+        }
+
+        setChartData(chartDataArray);
+      }
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+      setChartData([]);
+    } finally {
+      setChartLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -269,7 +417,7 @@ export default function Dashboard() {
         {/* Dashboard Overview */}
         <div className="bg-surface-container rounded-xl p-6 border border-outline-variant group hover:border-primary-container transition-all">
           <div className="flex justify-between items-start mb-4">
-            <span className="p-2 bg-primary-container/10 rounded-lg text-primary-container">
+            <span className="p-2 bg-primary-container/10 rounded-lg text-primary-component">
               <span className="material-symbols-outlined">dashboard</span>
             </span>
             <span className="text-secondary-fixed text-xs font-bold">+0%</span>
@@ -298,7 +446,50 @@ export default function Dashboard() {
           </div>
 
           <div id="chart-bars-container" className="absolute bottom-0 left-0 w-full h-[70%] flex items-end gap-2 px-6 pb-6">
-            {/* Chart bars will be dynamically generated */}
+            {chartLoading ? (
+              <div className="text-center w-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-container mx-auto mb-2"></div>
+                <p className="text-xs text-on-surface-variant">Loading chart data...</p>
+              </div>
+            ) : chartData.length === 0 ? (
+              <p className="text-xs text-on-surface-variant/40 text-center w-full">
+                No chart data available
+              </p>
+            ) : (
+              <>
+                {chartData.map((data, index) => {
+                  const maxValue = Math.max(...chartData.map(d => d.value), 1);
+                  const heightPercentage = (data.value / maxValue) * 100;
+                  const barHeight = `${heightPercentage}%`;
+                  const delay = index * 50; // Staggered animation delay
+
+                  return (
+                    <div key={index} className="relative flex-1 flex flex-col items-center">
+                      <div
+                        className={`relative w-[20px] bg-primary-container/20 rounded-t-lg overflow-hidden`}
+                        style={{
+                          height: barHeight,
+                          animationDelay: `${delay}ms`,
+                          animation: chartData.length > 0 ? 'barGrow 0.7s ease-out forwards' : 'none'
+                        }}
+                      >
+                        <div className="absolute bottom-0 left-0 w-full h-full bg-primary-container"></div>
+                      </div>
+                      <div className="flex flex-col items-center mt-2 text-xs">
+                        <p className="font-label-sm text-on-surface-variant">{data.label}</p>
+                        <p className="font-label-sm text-on-surface">{data.value}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <style jsx>{`
+                  @keyframes barGrow {
+                    from { transform: scaleY(0); transform-origin: bottom; }
+                    to { transform: scaleY(1); transform-origin: bottom; }
+                  }
+                `}</style>
+              </>
+            )}
           </div>
           <div className="absolute inset-0 pointer-events-none opacity-10 bg-gradient-to-t from-primary-container to-transparent"></div>
         </div>
@@ -351,21 +542,48 @@ export default function Dashboard() {
                 <div className="h-48 relative overflow-hidden bg-surface-container-low">
                   <img
                     className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                    src={(vehicle.images && vehicle.images.length > 0 && vehicle.images[0]) ? vehicle.images[0] : ''}
+                    src={vehicle.images?.[0] || ''}
                     alt={vehicle.name}
                   />
-                  <div className="absolute top-4 left-4 px-3 py-1 font-label-sm rounded-full text-[10px] uppercase font-bold bg-primary-container text-on-primary-container">
-                    Featured
+                  {vehicle.stock > 0 ? (
+                    <span className={`absolute top-4 left-4 px-3 py-1 bg-secondary-container text-on-secondary-container font-label-sm rounded-full text-[10px] uppercase font-bold tracking-wider`}>
+                      In Stock
+                    </span>
+                  ) : vehicle.stock === 0 ? (
+                    <span className={`absolute top-4 left-4 px-3 py-1 bg-error-container/20 text-error border border-error/30 font-label-sm rounded-full text-[10px] uppercase font-bold tracking-wider`}>
+                      Out of Stock
+                    </span>
+                  ) : (
+                    <span className={`absolute top-4 left-4 px-3 py-1 bg-surface-container text_on-surface-variant border border-outline-variant font-label-sm rounded-full text-[10px] uppercase font-bold tracking-wider`}>
+                      Low Stock
+                    </span>
+                  )}
+                  {vehicle.hidden && (
+                    <div className="absolute top-4 right-4 px-3 py-1 bg-primary-container text_on-primary-container font-label-sm rounded-full text-[10px] uppercase font-bold tracking-wider">
+                      Hidden
+                    </div>
+                  )}
+                </div>
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-headline-md text-[20px] text_on-surface group-hover:text_primary_container transition_colors">{vehicle.name}</h4>
+                    <span className="text_xs text_outline font_label_sm">{vehicle.id}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-4">
+                    <span className="text_primary_container text_lg font_bold">{vehicle.price ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(vehicle.price) : '₹0'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-secondary-fixed text-sm">{vehicle.battery || 'battery_full'}</span>
+                      <span className="text_xs text_on-surface-variant">{vehicle.range}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="p-4 flex-1 flex flex-col">
-                  <div className="mb-2">
-                    <h5 className="font-headline-md text-[18px] text-on-surface">{vehicle.name}</h5>
-                    <p className="text-xs text-outline font-label-sm">{vehicle.brand}</p>
-                  </div>
-                  <div className="mt-auto">
-                    <p className="text-primary-container text-lg font-bold">{vehicle.price ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(vehicle.price) : '₹0'}</p>
-                  </div>
+                <div className="px-6 pb-6 border-t border-outline-variant/20 pt-4 flex gap-2">
+                  <button onClick={() => handleEditVehicle(vehicle)} className="px-3 bg-surface-container-high hover:bg-primary-container/20 hover:text-primary-container text-xs text-on-surface-variant hover:text-on-surface py-2 rounded transition-all">
+                    <span className="material-symbols-outlined">edit</span>
+                  </button>
+                  <button onClick={() => handleDeleteVehicle(vehicle.id)} className="px-3 bg-surface-container-high hover:bg-error-container/25 hover:text-error text-xs text-on-surface-variant hover:text-on-surface py-2 rounded transition-all">
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
                 </div>
               </div>
             ))
@@ -374,80 +592,20 @@ export default function Dashboard() {
       </div>
     </div>
   );
+}
 
-  let currentChartMode: keyof typeof chartData = 'monthly';
+function handleEditVehicle(vehicle: Vehicle) {
+  // Navigate to edit vehicle page
+  // Note: In a real implementation, this would use useRouter()
+  // For now, we'll just log the action
+  console.log('Edit vehicle:', vehicle.id);
+}
 
-  function toggleChartMode(mode: keyof typeof chartData) {
-    currentChartMode = mode;
-    const mBtn = document.getElementById('chart-toggle-monthly');
-    const wBtn = document.getElementById('chart-toggle-weekly');
-    if (mBtn && wBtn) {
-      if (mode === 'monthly') {
-        mBtn.className = "px-3 py-1 bg-surface-container-high rounded text-xs font-bold text-primary-container";
-        wBtn.className = "px-3 py-1 text-xs font-bold text-on-surface-variant";
-      } else {
-        wBtn.className = "px-3 py-1 bg-surface-container-high rounded text-xs font-bold text-primary-container";
-        mBtn.className = "px-3 py-1 text-xs font-bold text-on-surface-variant";
-      }
-      renderChart();
-      setTimeout(animateChart, 50);
-    }
+function handleDeleteVehicle(id: string) {
+  // Delete vehicle with confirmation
+  // Note: In a real implementation, this would use supabase from '@/lib/supabase'
+  // For now, we'll just log the action
+  if (window.confirm('Are you sure you want to delete this vehicle?')) {
+    console.log('Delete vehicle ID:', id);
   }
-
-  function renderChart() {
-    const container = document.getElementById('chart-bars-container');
-    if (!container) return;
-
-    const data = chartData[currentChartMode];
-    container.innerHTML = data.map((item) => `
-      <div class="flex-1 flex flex-col items-center h-full group">
-        <div class="w-full flex flex-col items-end justify-center relative">
-          <div class="w-8/12 bg-primary-container/20 group-hover:bg-primary-container hover:shadow-[0_0_15px_rgba(0,229,255,0.6)] transition-all rounded-t-lg cursor-pointer chart-bar"
-               style="height: 0%;"
-               data-target-height="${item.height}">
-            <div class="absolute inset-x-0 top-0 h-1 bg-primary-container blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          </div>
-          <div className="absolute bottom-[calc(${item.height}+8px)] scale-0 group-hover:scale-100 bg-surface-container-highest border border-outline-variant text-[10px] text-primary-container px-2 py-0.5 rounded font-label-sm transition-all duration-150 z-20 whitespace-nowrap">
-            ${item.height} Growth
-          </div>
-        </div>
-        <span className="text-[10px] font-label-sm text_on-surface-variant uppercase mt-3 tracking-wider block">${item.label}</span>
-      </div>
-    `).join('');
-  }
-
-  function animateChart() {
-    const bars = document.querySelectorAll('.chart-bar');
-    bars.forEach((bar, index) => {
-      const targetHeight = bar.getAttribute('data-target-height');
-      if (targetHeight) {
-        setTimeout(() => {
-          (bar as HTMLElement).style.transition = `height 0.8s cubic-bezier(0.17, 0.67, 0.4, 1)`;
-          (bar as HTMLElement).style.height = targetHeight;
-        }, index * 60);
-      }
-    });
-  }
-
-  const chartData = {
-    monthly: [
-      { label: 'Jan', height: '40%' },
-      { label: 'Feb', height: '55%' },
-      { label: 'Mar', height: '45%' },
-      { label: 'Apr', height: '70%' },
-      { label: 'May', height: '90%' },
-      { label: 'Jun', height: '65%' },
-      { label: 'Jul', height: '80%' },
-      { label: 'Aug', height: '95%' }
-    ],
-    weekly: [
-      { label: 'Mon', height: '20%' },
-      { label: 'Tue', height: '45%' },
-      { label: 'Wed', height: '60%' },
-      { label: 'Thu', height: '35%' },
-      { label: 'Fri', height: '75%' },
-      { label: 'Sat', height: '90%' },
-      { label: 'Sun', height: '40%' }
-    ]
-  };
 }

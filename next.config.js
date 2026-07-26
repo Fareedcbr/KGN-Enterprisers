@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Allow LAN access during development
+  allowedDevOrigins: [
+    '192.168.1.5',
+  ],
+
   images: {
     remotePatterns: [
       {
@@ -33,7 +39,7 @@ const nextConfig = {
       },
     ],
   },
-  // Set the root for Turbopack to avoid issues with multiple lockfiles
+
   turbopack: {
     root: __dirname,
   },

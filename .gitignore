@@ -27,3 +27,12 @@ dev.log
 # OS
 .DS_Store
 Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Understand Anything
+.ua/
+
+# Backup files
+*.backup

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -9,34 +9,49 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const router = useRouter();
+
+  console.log("AdminLogin component rendered");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log("===== HANDLE SUBMIT STARTED =====");
+    console.log("Email:", email);
+    console.log("Password:", password);
+
     setLoading(true);
     setError(null);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      console.log("Calling API...");
+
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
-      if (authError) throw authError;
 
-      // Check if user is an admin
-      const { data: adminData, error: adminError } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
+      console.log("Response Status:", response.status);
 
-      if (adminError) throw adminError;
-      if (!adminData) {
-        throw new Error('User is not authorized as an admin');
+      const data = await response.json();
+      console.log("Response Body:", data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed');
       }
 
-      // Redirect to the intended page or /admin
-      const redirectTo = new URLSearchParams(window.location.search).get('redirectTo') || '/admin';
-      window.location.href = redirectTo;
+      console.log("Login Successful");
+
+      const redirectTo =
+        new URLSearchParams(window.location.search).get('redirectTo') ||
+        '/admin';
+
+      router.push(redirectTo);
     } catch (err: any) {
+      console.error("LOGIN ERROR:", err);
       setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
@@ -46,60 +61,61 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-container-high to-surface-container">
       <div className="w-full max-w-md space-y-6 p-8">
+
         <div className="text-center">
-          <h1 className="font-display-lg text-3xl font-bold text-on-surface">
-            Admin Login
+          <h1 className="text-3xl font-bold text-red-600">
+            TEST LOGIN PAGE
           </h1>
-          <p className="text-on-surface-variant">
+
+          <p>
             Sign in to access the KGN Electric Showroom admin dashboard
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+
           <div>
-            <label className="block font-label-sm text-xs text-outline uppercase tracking-wider mb-2">
-              Email Address
-            </label>
+            <label>Email</label>
+
             <input
               type="email"
               value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary-container outline-none"
+              className="w-full border rounded p-2"
             />
           </div>
 
           <div>
-            <label className="block font-label-sm text-xs text-outline uppercase tracking-wider mb-2">
-              Password
-            </label>
+            <label>Password</label>
+
             <input
               type="password"
               value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary-container outline-none"
+              className="w-full border rounded p-2"
             />
           </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={loading}
-              className={`px-5 py-2.5 bg-primary-container text-on-primary-container hover:bg-primary-container/90 rounded-lg text-sm font-bold ev-glow ${loading ? 'opacity-50' : ''}`}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            onClick={() => console.log("BUTTON CLICKED")}
+            className="bg-blue-600 text-white px-5 py-2 rounded"
+          >
+            {loading ? "Signing In..." : "Sign In"}
+          </button>
+
         </form>
 
         {error && (
-          <div className="p-4 mb-4 bg-error-container/20 text-error rounded-lg">
-            <span className="material-symbols-outlined mr-2">error</span>
+          <div className="text-red-600 mt-4">
             {error}
           </div>
         )}
+
       </div>
     </div>
   );

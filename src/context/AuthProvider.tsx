@@ -20,18 +20,12 @@ export function AuthProvider({ children, session }: { children: ReactNode; sessi
 
   useEffect(() => {
     // Set the session on the supabase client
-    if (session !== null) {
-      supabase.auth.setSession(session);
-    }
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthSession(session);
-      if (session !== null) {
-        supabase.auth.setSession(session);
-      }
     });
 
     return () => {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { uploadFiles } from '@/lib/storage';
 import { Vehicle } from '@/types/vehicle';
+import { useAuth } from '@/context/AuthProvider';
 
 interface VehicleFormProps {
   vehicle?: Vehicle; // The vehicle object for editing, undefined for creating
@@ -12,6 +13,8 @@ interface VehicleFormProps {
 }
 
 export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleFormProps) {
+  const { session } = useAuth();
+  const userId = session?.user?.id;
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
@@ -27,7 +30,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
     specifications: '',
     colors: '',
     featured: false,
-    availability: 'available',
+    availability: true,
     stock: 0,
     hidden: false,
     images: [] as string[],
@@ -57,7 +60,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         specifications: vehicle.specifications ? JSON.stringify(vehicle.specifications, null, 2) : '',
         colors: vehicle.colors ? vehicle.colors.join(', ') : '',
         featured: vehicle.featured || false,
-        availability: vehicle.availability || 'available',
+        availability: vehicle.availability || true,
         stock: vehicle.stock || 0,
         hidden: vehicle.hidden ?? false,
         images: vehicle.images || [],
@@ -81,7 +84,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         specifications: '',
         colors: '',
         featured: false,
-        availability: 'available',
+        availability: true,
         stock: 0,
         hidden: false,
         images: [],
@@ -152,6 +155,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         hidden: formData.hidden,
         images: imageUrls,
         updated_at: new Date().toISOString(),
+        ...(vehicle ? { updated_by: userId } : { created_by: userId, updated_by: userId }),
       };
 
       if (vehicle) {
@@ -347,13 +351,12 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
           <label className="block font-label-sm text-xs text-outline uppercase tracking-wider mb-2">Availability</label>
           <select
             name="availability"
-            value={formData.availability}
-            onChange={handleChange}
+            value={formData.availability ? 'true' : 'false'}
+            onChange= {(e) => setFormData(prev => ({ ...prev, availability: e.target.value === 'true', })) }
             className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:border-primary-container outline-none"
           >
-            <option value="available">Available</option>
-            <option value="coming_soon">Coming Soon</option>
-            <option value="out_of_stock">Out of Stock</option>
+            <option value="true">Available</option>
+            <option value="false">Not Available</option>
           </select>
         </div>
       </div>
@@ -451,6 +454,7 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-on-surface-variant">Add New Images</span>
                 <button
+                  type="button"
                   onClick={() => {
                     // Trigger file input click
                     const fileInput = document.getElementById('vehicle-image-upload');

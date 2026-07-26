@@ -188,7 +188,7 @@ export default function Vehicles() {
       {/* Vehicle Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center">
-          <div className="glass-panel w-full max-w-md rounded-xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300 mx-4">
+          <div className="glass-panel w-full max-w-7xl max-h-[95vh] overflow-y-auto rounded-xl shadow-2xl mx-4">
             <div className="p-6 border-b border-outline-variant flex justify-between items-center">
               <h3 className="font-headline-md text-on-surface text-lg">{editVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</h3>
               <button onClick={handleFormClose} className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-md hover:bg-surface-container">

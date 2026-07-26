@@ -1,7 +1,6 @@
 import './globals.css';
 import { AuthProvider } from '@/context/AuthProvider';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createSupabaseAuthClient } from '@/lib/supabaseServer';
 
 export const metadata = {
   title: 'KGN Enterprises - EV Showroom',
@@ -13,7 +12,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabaseClient = (await createSupabaseServerClient()) as SupabaseClient;
+  const { supabase: supabaseClient } = await createSupabaseAuthClient();
 
   const {
     data: { session },

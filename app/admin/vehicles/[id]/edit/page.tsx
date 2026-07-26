@@ -90,8 +90,8 @@ export default function EditVehicle() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-container-low">
-      <div className="w-full max-w-md space-y-6 p-6">
+    <div className="min-h-screen bg-surface-container-low p-8">
+      <div className="w-full max-w-7xl space-y-6 p-6">
         <div className="flex justify-between items-center">
           <div className="text-center">
             <h2 className="font-display-lg text-3xl font-bold text-on-surface">Edit Vehicle</h2>
