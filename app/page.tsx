@@ -710,7 +710,7 @@ export default function PublicWebsite() {
                         {/* Savings Badge */}
                         {vehicle.offer_price && (
                           <div className="mt-3 flex items-center gap-2 px-3 py-1 bg_primary_container/20 text_primary_container rounded">
-                            <span className="material-symbols_outlined text_xs">discount</span>
+                            <span className="material-symbols_outlined text_xs">Discount</span>
                             <span className="font_label_sm text_xs">{calculateSavings(vehicle)}% SAVINGS</span>
                           </div>
                         )}
@@ -866,7 +866,7 @@ export default function PublicWebsite() {
                       }}
                       className="p-2 bg_surface_container/50 rounded-full hover:bg_surface_container/70 transition-colors"
                     >
-                      <span className="material-symbols_outlined text-[18px]">chevron_left</span>
+                      <span className="material-symbols_outlined text-[18px]">left</span>
                     </button>
                   </div>
                   <div className="absolute top-1/2 right-2 -translate_y-1/2 flex_items_center">
@@ -876,7 +876,7 @@ export default function PublicWebsite() {
                       }}
                       className="p-2 bg_surface_container/50 rounded-full hover:bg_surface_container/70 transition-colors"
                     >
-                      <span className="material-symbols_outlined text-[18px]">chevron_right</span>
+                      <span className="material-symbols_outlined text-[18px]">right</span>
                     </button>
                   </div>
                 </div>
@@ -942,11 +942,11 @@ export default function PublicWebsite() {
                       <span>{selectedVehicle.battery}</span>
                     </p>
                     <p className="fx items-center gap-2">
-                      <span className="material-symbols_outlined text_secondary_fixed">ev_station</span>
+                      <span className="material-symbols_outlined text_secondary_fixed">Range</span>
                       <span>{selectedVehicle.range}</span>
                     </p>
                     <p className="flex items-center gap-2">
-                      <span className="material-symbols_outlined text_secondary_fixed">flash_on</span>
+                      <span className="material-symbols_outlined text_secondary_fixed">charging_time</span>
                       <span>{selectedVehicle.charging_time}</span>
                     </p>
                     <p className="flex items-center gap-2">
@@ -954,7 +954,7 @@ export default function PublicWebsite() {
                       <span>{selectedVehicle.top_speed}</span>
                     </p>
                     <p className="flex items-center gap-2">
-                      <span className="material-symbols_outlined text_secondary_fixed">ev_plug</span>
+                      <span className="material-symbols_outlined text_secondary_fixed">Motor</span>
                       <span>{selectedVehicle.motor_power}</span>
                     </p>
                   </div>

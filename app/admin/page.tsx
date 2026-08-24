@@ -178,20 +178,20 @@ export default function Dashboard() {
     }
 
     setStats({
-      totalVehicles: vehiclesCount,
-      availableVehicles: availableVehiclesCount,
-      soldVehicles: soldVehiclesCount,
-      featuredVehicles: featuredVehiclesCount,
-      totalEnquiries: enquiriesCount,
-      pendingEnquiries: pendingEnquiriesCount,
+      totalVehicles: vehiclesCount ?? 0,
+      availableVehicles: availableVehiclesCount ?? 0,
+      soldVehicles: soldVehiclesCount ?? 0,
+      featuredVehicles: featuredVehiclesCount ?? 0,
+      totalEnquiries: enquiriesCount ?? 0,
+      pendingEnquiries: pendingEnquiriesCount ?? 0,
     });
     console.log("Stats being set:", {
-      totalVehicles: vehiclesCount,
-      availableVehicles: availableVehiclesCount,
-      soldVehicles: soldVehiclesCount,
-      featuredVehicles: featuredVehiclesCount,
-      totalEnquiries: enquiriesCount,
-      pendingEnquiries: pendingEnquiriesCount,
+      totalVehicles: vehiclesCount ?? 0,
+      availableVehicles: availableVehiclesCount ?? 0,
+      soldVehicles: soldVehiclesCount ?? 0,
+      featuredVehicles: featuredVehiclesCount ?? 0,
+      totalEnquiries: enquiriesCount ?? 0,
+      pendingEnquiries: pendingEnquiriesCount ?? 0,
     });
   }
 

@@ -60,7 +60,10 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel }: VehicleForm
         specifications: vehicle.specifications ? JSON.stringify(vehicle.specifications, null, 2) : '',
         colors: vehicle.colors ? vehicle.colors.join(', ') : '',
         featured: vehicle.featured || false,
-        availability: vehicle.availability || true,
+        availability:
+        typeof vehicle.availability === 'boolean'
+         ? vehicle.availability
+         : true,
         stock: vehicle.stock || 0,
         hidden: vehicle.hidden ?? false,
         images: vehicle.images || [],

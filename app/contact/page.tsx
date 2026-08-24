@@ -197,7 +197,7 @@ export default function ContactPage() {
                       <div>
                         <h4 className="font-bold text-on-surface">Phone Numbers</h4>
                         <p className="text-on-surface-variant">
-                          Sales: +91 94836 17146<br/>
+                          Sales: +91 97400 20909<br/>
                           Support: +91 94836 17146
                         </p>
                       </div>
@@ -213,9 +213,9 @@ export default function ContactPage() {
                       <div>
                         <h4 className="font-bold text-on-surface">Email Addresses</h4>
                         <p className="text-on-surface-variant">
-                          Sales: sales@kgnenterprises.co.in<br/>
-                          Info: info@kgnenterprises.co.in<br/>
-                          Support: support@kgnenterprises.co.in
+                          Sales: kgnenterprises952@gmail.com<br/>
+                          Info: kgnenterprises952@gmail.com<br/>
+                          Support: kgnenterprises952@gmail.com
                         </p>
                       </div>
                     </div>
@@ -231,7 +231,7 @@ export default function ContactPage() {
                         <h4 className="font-bold text-on-surface">Showroom Hours</h4>
                         <p className="text-on-surface-variant">
                           Monday - Saturday: 9:30 AM - 8:00 PM<br/>
-                          Sunday: 10:00 AM - 4:00 PM
+                          Sunday: Holiday (Closed)
                         </p>
                       </div>
                     </div>
@@ -413,7 +413,7 @@ export default function ContactPage() {
             <p className="text-xs text-on-surface-variant leading-relaxed">
               📍 KGN Enterprises, Bus Stand main Road, Basvakalyan<br/>
               📞 Sales: +91 94836 17146<br/>
-              ✉️ sales@kgnenterprises.co.in
+              ✉️ kgnenterprises952@gmail.com
             </p>
           </div>
         </div>
