@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import emailjs from '@emailjs/browser';
 import { supabase } from '@/lib/supabase';
 
 interface ContactForm {
@@ -52,49 +53,89 @@ export default function ContactPage() {
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!contactForm.name || !contactForm.message) {
-      alert('Please fill in your name and message.');
-      return;
+  if (!contactForm.name || !contactForm.message) {
+    alert('Please fill in your name and message.');
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    let selectedVehName = null;
+
+    if (contactForm.vehicleId !== 'none') {
+      const vehObj = vehicles.find(v => v.id === contactForm.vehicleId);
+      selectedVehName = vehObj ? vehObj.name : null;
     }
 
-    setIsSubmitting(true);
-    try {
-      let selectedVehName = null;
-      if (contactForm.vehicleId !== 'none') {
-        const vehObj = vehicles.find(v => v.id === contactForm.vehicleId);
-        selectedVehName = vehObj ? vehObj.name : null;
-      }
+    // Create email subject
+    const emailSubject = selectedVehName
+      ? `New Enquiry - ${selectedVehName}`
+      : 'New Enquiry - KGN Enterprises Website';
 
-      const { error: insertErr } = await supabase.from('enquiries').insert({
-        customer_name: contactForm.name,
-        email: contactForm.email || null,
-        phone: contactForm.phone || null,
-        vehicle_id: contactForm.vehicleId === 'none' ? null : contactForm.vehicleId,
-        vehicle_name: selectedVehName,
+    // Current date and time
+    const submissionTime = new Date().toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+
+    // 1. Save enquiry to Supabase
+    const { error: insertErr } = await supabase.from('enquiries').insert({
+      customer_name: contactForm.name,
+      email: contactForm.email || null,
+      phone: contactForm.phone || null,
+      vehicle_id: contactForm.vehicleId === 'none' ? null : contactForm.vehicleId,
+      vehicle_name: selectedVehName,
+      message: contactForm.message,
+      status: 'new'
+    });
+
+    if (insertErr) throw insertErr;
+
+    // 2. Send enquiry to owner's email through EmailJS
+    await emailjs.send(
+      process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+      process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
+      {
+        name: contactForm.name,
+        email: contactForm.email || 'Not provided',
+        phone: contactForm.phone || 'Not provided',
+        subject: emailSubject,
         message: contactForm.message,
-        status: 'new'
-      });
+        time: submissionTime
+      },
+      {
+        publicKey: process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
+      }
+    );
 
-      if (insertErr) throw insertErr;
+    // 3. Show success message
+    setShowThankYou(true);
 
-      setShowThankYou(true);
-      // Reset form after successful submission
-      setContactForm({
-        name: '',
-        email: '',
-        phone: '',
-        message: '',
-        vehicleId: 'none'
-      });
-    } catch (err: any) {
-      console.error('Error submitting contact form:', err);
-      alert(err.message || 'Failed to submit your message. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    // Reset form
+    setContactForm({
+      name: '',
+      email: '',
+      phone: '',
+      message: '',
+      vehicleId: 'none'
+    });
+
+  } catch (err: any) {
+    console.error('Error submitting contact form:', err);
+
+    alert(
+      err?.text ||
+      err?.message ||
+      'Failed to submit your message. Please try again.'
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Navigation helper
   const navigateToPage = (page: string) => {

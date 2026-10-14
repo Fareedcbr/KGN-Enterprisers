@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import SkeletonCard from '@/components/SkeletonCard';
+import emailjs from '@emailjs/browser';
 
 interface Vehicle {
   id: string;
@@ -139,39 +140,88 @@ export default function PublicWebsite() {
   };
 
   // Handle booking form submission
-  async function handleBookingSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!bookingVehicle) return;
-    if (!bookingForm.name || !bookingForm.phone) {
-      showToast('Name and phone number are required to book a ride.', 'error');
-      return;
-    }
+ async function handleBookingSubmit(e: React.FormEvent) {
+  e.preventDefault();
 
-    setIsSubmittingBooking(true);
-    try {
-      const { error: insertErr } = await supabase.from('enquiries').insert({
-        customer_name: bookingForm.name,
-        email: bookingForm.email || null,
+  if (!bookingVehicle) return;
+
+  if (!bookingForm.name || !bookingForm.phone) {
+    showToast('Name and phone number are required to book a ride.', 'error');
+    return;
+  }
+
+  setIsSubmittingBooking(true);
+
+  try {
+    const bookingMessage = bookingForm.message
+      ? `[Test Ride Booking Request] ${bookingForm.message}`
+      : `Requested a test ride for model: ${bookingVehicle.name}`;
+
+    // 1. Save test ride request to Supabase
+    const { error: insertErr } = await supabase.from('enquiries').insert({
+      customer_name: bookingForm.name,
+      email: bookingForm.email || null,
+      phone: bookingForm.phone,
+      vehicle_id: bookingVehicle.id,
+      vehicle_name: bookingVehicle.name,
+      message: bookingMessage,
+      status: 'new'
+    });
+
+    if (insertErr) throw insertErr;
+
+    // 2. Send test ride request to owner's email
+    const submissionTime = new Date().toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+
+    await emailjs.send(
+      process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+      process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
+      {
+        name: bookingForm.name,
+        email: bookingForm.email || 'Not provided',
         phone: bookingForm.phone,
-        vehicle_id: bookingVehicle.id,
-        vehicle_name: bookingVehicle.name,
-        message: bookingForm.message
-          ? `[Test Ride Booking Request] ${bookingForm.message}`
-          : `Requested a test ride for model: ${bookingVehicle.name}`,
-        status: 'new'
-      });
+        subject: `Test Ride Request - ${bookingVehicle.name}`,
+        message: bookingMessage,
+        time: submissionTime
+      },
+      {
+        publicKey: process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
+      }
+    );
 
-      if (insertErr) throw insertErr;
+    // 3. Show success message
+    showToast(
+      `Test ride successfully requested for ${bookingVehicle.name}! We will call you soon.`,
+      'success'
+    );
 
-      showToast(`Test ride successfully requested for ${bookingVehicle.name}! We will call you soon.`, 'success');
-      setBookingForm({ name: '', email: '', phone: '', message: '' });
-      setBookingVehicle(null);
-    } catch (err: any) {
-      console.error('Error booking test ride:', err);
-      showToast(err.message || 'Failed to request test ride. Please try again.', 'error');
-    } finally {
-      setIsSubmittingBooking(false);
-    }
+    // 4. Reset form and close modal
+    setBookingForm({
+      name: '',
+      email: '',
+      phone: '',
+      message: ''
+    });
+
+    setBookingVehicle(null);
+
+  } catch (err: any) {
+    console.error('Error booking test ride:', err);
+
+    showToast(
+      err?.text ||
+      err?.message ||
+      'Failed to request test ride. Please try again.',
+      'error'
+    );
+
+   } finally {
+    setIsSubmittingBooking(false);
+   }
   }
 
   // Handle contact form submission
