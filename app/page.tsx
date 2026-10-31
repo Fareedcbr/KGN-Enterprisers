@@ -1221,27 +1221,46 @@ export default function PublicWebsite() {
       )}
 
       {/* Toasts */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-3 w-80">
+      <div className="fixed bottom-6 right-6 z-[100] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+            role="status"
+            className={`flex items-start gap-3 rounded-xl border p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-right-4 duration-300 ${
               toast.type === 'success'
-                ? 'bg_secondary_container/90 text_secondary_fixed'
+                ? 'border-green-500/30 bg-slate-900/95 text-white'
                 : toast.type === 'error'
-                ? 'bg_error_container/90 text_error'
-                : 'bg_primary_container/90 text_on_primary_container'
+                ? 'border-red-500/30 bg-slate-900/95 text-white'
+                : 'border-cyan-500/30 bg-slate-900/95 text-white'
             }`}
           >
-            <span className="material-symbols_outlined mr-3 w-5 h-5 flex_shrink-0">
-              {toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'error' : 'info'}
-            </span>
-            <div className="flex-1">
-              <p className="text-sm font_medium">{toast.message}</p>
+          <span
+            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg font-bold ${
+              toast.type === 'success'
+                ? 'bg-green-500/15 text-green-400'
+                : toast.type === 'error'
+                ? 'bg-red-500/15 text-red-400'
+                : 'bg-cyan-500/15 text-cyan-400'
+            }`}
+          >
+            {toast.type === 'success' ? '✓' : toast.type === 'error' ? '!' : 'i'}
+          </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">
+                {toast.type === 'success'
+                  ? 'Success!'
+                  : toast.type === 'error'
+                  ? 'Something went wrong'
+                  : 'Information'}
+              </p>
+              <p className="mt-1 break-words text-sm leading-relaxed text-slate-300">
+                {toast.message}
+              </p>
             </div>
           </div>
         ))}
       </div>
+
     </div>
   );
 }

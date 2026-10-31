@@ -3,8 +3,9 @@ import { AuthProvider } from '@/context/AuthProvider';
 import { createSupabaseAuthClient } from '@/lib/supabaseServer';
 
 export const metadata = {
-  title: 'KGN Enterprises - EV Showroom',
-  description: 'Premium Electric Vehicle Showroom Management System',
+  title: 'KGN Enterprises | Electric Scooters & EV Showroom in Basavakalyan',
+  description:
+    'Visit KGN Enterprises on Bus Stand Road, opposite Goke Mastan Scrap Shop, Basavakalyan, Karnataka. Explore electric scooters, discover the latest offers, and book a test ride.',
 };
 
 export default async function RootLayout({
